@@ -28,21 +28,16 @@ async def ingest(files: List[UploadFile] = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-    try:
-        # Load and split text
-        pipeline.load_files(file_paths)
+    # Load and split text
+    pipeline.load_files(file_paths)
 
-        # Build vector store
-        pipeline.embed_and_store()
+    # Build vector store
+    pipeline.embed_and_store()
 
-        # Save index
-        pipeline.save_index()
+    # Save index
+    pipeline.save_index()
 
-        return {"message": f"{len(files)} files ingested and index created."}
-        
-    except Exception as e:
-        print("Error ingesting files:", e)
-        return {"error": str(e)}
+    return {"message": f"{len(files)} files ingested and index created."}
 
 @app.get("/query")
 async def query(q: str):
