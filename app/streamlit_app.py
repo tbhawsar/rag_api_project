@@ -26,7 +26,3 @@ with st.sidebar:
         with st.spinner("Querying..."):
             res = requests.get(f"http://localhost:8000/query?q={query}")
             st.write(res.json())
-            
-            
-    # res = requests.get(f"http://localhost:8000/query?q={query}", files=pdf_docs)
-    # st.write(res.json())
