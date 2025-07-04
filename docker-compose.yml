@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: fastapi.Dockerfile
+    container_name: rag_fastapi
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/data:/app/app/data
+      - ./faiss_index:/app/faiss_index
+      - ./.env:/app/.env:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: app/streamlit.Dockerfile
+    container_name: rag_streamlit
+    ports:
+      - "8501:8501"
+    depends_on:
+      - fastapi
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./app/data:/app/app/data
+      - ./faiss_index:/app/faiss_index
+      - ./.env:/app/.env:ro 
