@@ -1,6 +1,7 @@
 from typing import List
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import RedirectResponse
 from .rag_pipeline import RAGPipeline
 import os
 import shutil
@@ -9,6 +10,11 @@ load_dotenv()
 
 app = FastAPI()
 pipeline = RAGPipeline()
+
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs")
 
 @app.post("/ingest")
 async def ingest(files: List[UploadFile] = File(...)):

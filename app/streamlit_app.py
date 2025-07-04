@@ -18,11 +18,11 @@ with st.sidebar:
     
     if st.button("Process Documents"):
         with st.spinner("Processing..."):
-            res = requests.post(f"http://localhost:8000/ingest", files=files)
+            res = requests.post(f"http://fastapi:8000/ingest", files=files)
             st.write(res.json())
     
     query = st.text_input("Ask a question about your documents:")
     if st.button("Query Documents"):
         with st.spinner("Querying..."):
-            res = requests.get(f"http://localhost:8000/query?q={query}")
+            res = requests.get(f"http://fastapi:8000/query?q={query}")
             st.write(res.json())

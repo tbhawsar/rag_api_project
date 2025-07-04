@@ -1,8 +1,7 @@
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
-from langchain_openai import OpenAI
+from langchain_openai import OpenAI, OpenAIEmbeddings
 import os
 from PyPDF2 import PdfReader
 
