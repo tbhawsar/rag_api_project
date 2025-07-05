@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
-COPY faiss_index/ ./faiss_index/
+# COPY faiss_index/ ./faiss_index/
 
 EXPOSE 8000
 
