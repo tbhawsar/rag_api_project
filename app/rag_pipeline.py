@@ -1,8 +1,11 @@
+import os
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain_openai import OpenAI, OpenAIEmbeddings
-import os
+from langchain.memory import ConversationBufferMemory
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain import hub
 from PyPDF2 import PdfReader
 
 class RAGPipeline:
@@ -17,6 +20,21 @@ class RAGPipeline:
         self.vectorstore = None
         self.documents = None
         self.qa_chain = None
+        # Initialize memory for conversation history
+        self.memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True
+        )
+
+    def _extract_text_from_pdf(self, file_path):
+
+        text = ""
+        reader = PdfReader(file_path)
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
 
     def load_files(self, file_paths):
         texts = []
@@ -43,15 +61,6 @@ class RAGPipeline:
 
         return self.documents
 
-    def _extract_text_from_pdf(self, file_path):
-        text = ""
-        reader = PdfReader(file_path)
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-        return text
-
     def embed_and_store(self):
         if not self.documents:
             raise ValueError("No documents loaded. Call load_text_file() first.")
@@ -74,13 +83,6 @@ class RAGPipeline:
         print("FAISS Index loaded successfully.")
         return f"FAISS index loaded successfully from {self.faiss_index_path}."
 
-    def query(self, query_text, k=100):
-        if not self.vectorstore:
-            raise ValueError("No FAISS index loaded. \
-                Call load_index() or embed_and_store() first.")
-        results = self.vectorstore.similarity_search(query_text, k=k)
-        return [doc.page_content for doc in results]
-
     def create_qa_chain(self):
         
         if not self.vectorstore:
@@ -89,12 +91,23 @@ class RAGPipeline:
 
         try:
             retriever = self.vectorstore.as_retriever()
-            llm = OpenAI(temperature=0)
-
-            self.qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                retriever=retriever,
-                return_source_documents=True,
+            llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
+            
+            # Create history-aware retriever using LCEL and rephrase prompt
+            history_aware_retriever = create_history_aware_retriever(
+                llm, retriever, rephrase_prompt
+            )
+            
+            # Create the document combination chain using qa chat prompt
+            retrieval_qa_chat_prompt = hub.pull("langchain-ai/retrieval-qa-chat")
+            combine_docs_chain = create_stuff_documents_chain(
+                llm, retrieval_qa_chat_prompt
+            )
+            
+            # Create the final retrieval chain with history awareness
+            self.qa_chain = create_retrieval_chain(
+                history_aware_retriever, combine_docs_chain
             )
 
         except Exception as e:
@@ -108,10 +121,49 @@ class RAGPipeline:
             raise ValueError("QA chain not created, call create_qa_chain() first.")
          
         try:
-            result = self.qa_chain({"query": query})
+            # Get conversation history from memory
+            chat_history = self.memory.chat_memory.messages
+            
+            # Invoke the LCEL chain with input and chat history
+            result = self.qa_chain.invoke({
+                "input": query,
+                "chat_history": chat_history
+            })
+            
+            # Update memory with the conversation
+            self.memory.chat_memory.add_user_message(query)
+            self.memory.chat_memory.add_ai_message(result["answer"])
+            
             return result
         except Exception as e:
             print("Error answering question:", e)
             return None
 
-   
+    def clear_conversation_history(self):
+        """Clear the conversation history"""
+        self.memory.chat_memory.clear()
+        print("Conversation history cleared.")
+
+    def get_conversation_history(self):
+        """Get the current conversation history"""
+        return self.memory.chat_memory.messages
+
+    def get_conversation_summary(self):
+        """Get a summary of the conversation history"""
+        messages = self.memory.chat_memory.messages
+        if not messages:
+            return "No conversation history yet."
+        
+        summary = f"Conversation has {len(messages)} messages:\n"
+        for i, message in enumerate(messages, 1):
+            role = message.type
+            # Replace role names with more user-friendly labels
+            if role == "human":
+                role = "Me"
+            elif role == "ai":
+                role = "Documents"
+            
+            content = str(message.content)
+            content_preview = content[:100] + "..." if len(content) > 500 else content
+            summary += f"{i}. {role}: {content_preview}\n"
+        return summary

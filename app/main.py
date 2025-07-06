@@ -43,11 +43,29 @@ async def ingest(files: List[UploadFile] = File(...)):
     # Save index
     pipeline.save_index()
 
-    return {"message": f"{len(files)} files ingested and index created."}
+    print("Type 'history' as the query to see the conversation history, or 'clear' to clear the conversation history:\n")
+    return {"message": f"{len(files)} files ingested. You can now ask questions about your documents."}
 
 @app.get("/query")
 async def query(q: str):
     print("Received query:", q)
+    
+    # Handle special commands first
+    if q.lower() == 'history':
+        try:
+            pipeline.load_index()
+            history_summary = pipeline.get_conversation_summary()
+            return {"answer": history_summary, "source": []}
+        except Exception as e:
+            return {"error": f"Error getting history: {str(e)}"}
+    
+    if q.lower() == 'clear':
+        try:
+            pipeline.load_index()
+            pipeline.clear_conversation_history()
+            return {"answer": "Conversation history cleared.", "source": []}
+        except Exception as e:
+            return {"error": f"Error clearing history: {str(e)}"}
     
     try:
         # Load vector store if not already loaded
@@ -58,19 +76,17 @@ async def query(q: str):
         # Load QA chain if not already loaded
         print("Loading QA chain...")
         pipeline.create_qa_chain()
-        print("QA chain loaded.")
+        print("QA chain loaded. Starting conversation...")
 
         # Answer the question
         print("Answering question...")
         result = pipeline.answer_question(q)
         if not result:
             raise ValueError("No answer generated.")
-        
-        print("Generated Answer:", result["result"])
-        return {"answer": result["result"],
-                "source": [doc.page_content for doc in result["source_documents"]]
+            
+        return {"answer": result["answer"],
+                "source": [doc.page_content for doc in result["context"]]
         }
-
 
     except FileNotFoundError as e:
         print("Index file not found:", e)
@@ -81,5 +97,3 @@ async def query(q: str):
     except Exception as e:
         print("Unexpected error:", e)
         return {"error": "An unexpected error occurred."}
-
-    
