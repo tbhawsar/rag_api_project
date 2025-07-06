@@ -2,14 +2,20 @@
 
 A Retrieval-Augmented Generation (RAG) system that allows you to ingest PDF and TXT documents, create vector embeddings, and query them using natural language. The system consists of a FastAPI backend for document processing and a Streamlit frontend for user interaction, all containerized with Docker.
 
+## 🌐 Live Demo
+
+**Try the application live:** [http://54.209.156.134:8501/](http://54.209.156.134:8501/)
+
 ## Features
 
 - **Multi-format Document Support**: Upload PDF and TXT files
 - **Vector Embeddings**: Uses OpenAI embeddings with FAISS vector store
-- **RAG Pipeline**: Combines document retrieval with LLM generation
-- **Web Interface**: Streamlit app for easy document upload and querying
+- **RAG Pipeline**: Combines document retrieval with LLM generation using GPT-4o-mini
+- **Conversation Memory**: Maintains chat history across sessions using LCEM History Aware Retrieval Chain
+- **Modern Web Interface**: Streamlit app with tabbed interface for chat, history, and about sections
 - **REST API**: FastAPI backend for programmatic access
 - **Dockerized**: Easy deployment with Docker and Docker Compose
+- **Cloud Deployed**: Running on AWS EC2 for public access
 
 ## Project Structure
 
@@ -18,10 +24,10 @@ rag_api_project/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI server with endpoints
-│   ├── rag_pipeline.py      # Core RAG functionality
+│   ├── rag_pipeline.py      # Core RAG functionality with conversation memory
 │   ├── data/                # Uploaded documents storage
 │   │   └── ingested_text/   # Combined text output
-│   └── streamlit_app.py     # Streamlit frontend
+│   └── streamlit_app.py     # Streamlit frontend with tabbed interface
 ├── tests/
 │   └── test_api.py          # API tests
 ├── faiss_index/             # Vector store index
@@ -65,14 +71,31 @@ rag_api_project/
 
 ### Using the Streamlit Interface
 
+The application features a modern tabbed interface:
+
+#### 💬 Chat Tab
 1. **Upload Documents**
-   - Open http://localhost:8501 in your browser
    - Use the sidebar to upload PDF or TXT files
    - Click "Process Documents" to ingest them
 
 2. **Query Documents**
    - Enter your question in the text input
    - Click "Query Documents" to get an answer
+   - View source documents in expandable sections
+
+#### 📜 Chat History Tab
+- **Refresh History**: Click to view your conversation history
+- **Clear History**: Remove all conversation memory
+- View a summary of all previous interactions
+
+#### ℹ️ About Tab
+- Learn about the project features and technology stack
+- Access useful commands and tips for better results
+
+### Special Commands
+
+- Type `history` in the chat to view conversation history
+- Type `clear` in the chat to clear conversation history
 
 ### Using the API Directly
 
@@ -89,7 +112,7 @@ Upload and process documents.
 **Response:**
 ```json
 {
-  "message": "3 files ingested and index created."
+  "message": "3 files ingested. You can now ask questions about your documents."
 }
 ```
 
@@ -114,6 +137,10 @@ Query the ingested documents.
   "source": ["source document chunks..."]
 }
 ```
+
+**Special Commands:**
+- `q=history` - Get conversation history
+- `q=clear` - Clear conversation history
 
 **Example:**
 ```bash
@@ -183,6 +210,34 @@ pipeline = RAGPipeline(
 - **Combined text**: Saved to `app/data/ingested_text/combined_ingest.txt`
 - **Vector index**: Stored in `faiss_index/` (persisted via Docker volumes)
 
+## Deployment
+
+### AWS EC2 Deployment
+
+The application is currently deployed on AWS EC2 and accessible at:
+- **Live Demo**: [http://54.209.156.134:8501/](http://54.209.156.134:8501/)
+
+### Deployment Steps
+
+1. **Launch EC2 Instance**
+   - Use Ubuntu or Amazon Linux 2
+   - Configure security groups to allow ports 8000 and 8501
+
+2. **Install Docker and Docker Compose**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install docker.io docker-compose
+   sudo usermod -aG docker $USER
+   ```
+
+3. **Deploy Application**
+   ```bash
+   git clone <repository-url>
+   cd rag_api_project
+   # Add your .env file with OPENAI_API_KEY
+   docker-compose up -d
+   ```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -209,6 +264,10 @@ pipeline = RAGPipeline(
 5. **Port conflicts**
    - Ensure ports 8000 and 8501 are not already in use
    - Modify the port mappings in `docker-compose.yml` if needed
+
+6. **Conversation history issues**
+   - History is stored in memory and will be lost on container restart
+   - Use the `history` command to check current conversation state
 
 ### Debug Mode
 
@@ -246,15 +305,43 @@ Key dependencies include:
 - `streamlit` - Web interface
 - `langchain` - RAG framework
 - `langchain-openai` - OpenAI integration
+- `langchain-community` - Community integrations
 - `openai` - OpenAI API client
 - `faiss-cpu` - Vector similarity search
 - `PyPDF2` - PDF text extraction
 - `python-dotenv` - Environment variable management
+- `requests` - HTTP client for inter-service communication
+
+## Technology Stack
+
+- **Backend**: FastAPI with Python
+- **Frontend**: Streamlit with modern tabbed interface
+- **AI/ML**: LangChain, OpenAI GPT-4o-mini, FAISS vector database
+- **Document Processing**: PyPDF2 for PDF extraction
+- **Cloud**: AWS EC2
+- **Containerization**: Docker & Docker Compose
 
 ## License
 
-[Add your license information here]
+MIT License
 
-## Contributing
+Copyright (c) 2025 Tilak Bhawsar
 
-[Add contribution guidelines here]
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
