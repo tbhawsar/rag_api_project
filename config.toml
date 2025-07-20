@@ -1,3 +1,9 @@
 # .config.toml
 [browser]
 gatherUsageStats = false
+
+[server]
+enableCORS = true
+enableXsrfProtection = true
+headless = true
+port = 8501
